@@ -1,5 +1,5 @@
 use clap::{App, Arg};
-use std::{fs, process::exit, char};
+use std::{char, fs, io::{self, Write}, process::exit};
 
 fn get_value(kind: u16, registers: &[u16]) -> u16 {
     match kind {
@@ -80,6 +80,8 @@ fn main() {
     let mut registers = [0u16; 8];
     let mut stack = vec![];
 
+    let mut input_buffer = vec![];
+
     println!("{:?}", &memory[0..15]);
 
     let mut ip = 0;
@@ -117,7 +119,7 @@ fn main() {
                 // equal
                 let b = get_value(memory[ip + 2], &registers);
                 let c = get_value(memory[ip + 3], &registers);
-                let value = if b == c {1} else {0};
+                let value = if b == c { 1 } else { 0 };
                 set_value(memory[ip + 1], &mut registers, value);
                 ip += 3;
             }
@@ -125,7 +127,7 @@ fn main() {
                 // greater
                 let b = get_value(memory[ip + 2], &registers);
                 let c = get_value(memory[ip + 3], &registers);
-                let value = if b > c {1} else {0};
+                let value = if b > c { 1 } else { 0 };
                 set_value(memory[ip + 1], &mut registers, value);
                 ip += 3;
             }
@@ -232,6 +234,36 @@ fn main() {
                 } else {
                     print!("{{{}}}", value);
                 }
+            }
+            20 => {
+                // input
+                if input_buffer.is_empty() {
+                    let mut string = String::new();
+                    loop {
+                        print!("> ");
+                        io::stdout().flush().expect("Error: while writing to stdout");
+                        match io::stdin().read_line(&mut string) {
+                            Ok(_) => (),
+                            Err(e) => {
+                                eprintln!("Error: stdio error: {}", e);
+                                exit(10);
+                            }
+                        }
+
+                        if !string.trim().is_empty() {
+                            break;
+                        }
+                    }
+                    input_buffer = string.chars().filter(|&x|x!='\r').rev().collect();
+                }
+
+                let c = input_buffer.pop().unwrap() as u32;
+                if c >= 32768 {
+                    eprintln!("Input character too large");
+                    exit(9);
+                }
+                set_value(memory[ip + 1], &mut registers, c as u16);
+                ip += 1;
             }
             21 => {
                 // noop
