@@ -1,5 +1,12 @@
-use clap::{App, Arg};
-use std::{char, fs, io::{self, Write}, process::exit};
+use clap::{App, Arg, SubCommand};
+use std::{
+    char, fs,
+    io::{self, Write},
+    process::exit,
+};
+
+mod solve_door;
+use solve_door::solve_door;
 
 fn get_value(kind: u16, registers: &[u16]) -> u16 {
     match kind {
@@ -46,7 +53,13 @@ fn main() {
                 .value_name("input file")
                 .help("Binary file to be run"),
         )
+        .subcommand(SubCommand::with_name("solve").about("Solve the door puzzle"))
         .get_matches();
+
+    if let ("solve", Some(_)) = matches.subcommand() {
+        solve_door();
+        return;
+    }
 
     let file = match fs::read(
         matches
@@ -81,8 +94,6 @@ fn main() {
     let mut stack = vec![];
 
     let mut input_buffer = vec![];
-
-    println!("{:?}", &memory[0..15]);
 
     let mut ip = 0;
     loop {
@@ -241,7 +252,9 @@ fn main() {
                     let mut string = String::new();
                     loop {
                         print!("> ");
-                        io::stdout().flush().expect("Error: while writing to stdout");
+                        io::stdout()
+                            .flush()
+                            .expect("Error: while writing to stdout");
                         match io::stdin().read_line(&mut string) {
                             Ok(_) => (),
                             Err(e) => {
@@ -254,7 +267,7 @@ fn main() {
                             break;
                         }
                     }
-                    input_buffer = string.chars().filter(|&x|x!='\r').rev().collect();
+                    input_buffer = string.chars().filter(|&x| x != '\r').rev().collect();
                 }
 
                 let c = input_buffer.pop().unwrap() as u32;
